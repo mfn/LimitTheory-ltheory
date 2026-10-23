@@ -88,4 +88,8 @@ function LTheory:onDraw ()
   self.canvas:draw(self.resX, self.resY)
 end
 
+function LTheory:onExit ()
+  Audio.Free()
+end
+
 return LTheory

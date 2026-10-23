@@ -27,7 +27,7 @@ and CMake 3.13+. No Xcode project or IDE is needed.
 brew install cmake pkg-config sdl2-compat glew freetype luajit lz4 bullet git-lfs luarocks
 luarocks --lua-version=5.1 --lua-dir="$(brew --prefix luajit)" --tree="$(brew --prefix)" install luafilesystem 1.8.0-1
 git submodule update --init --recursive
-python3 configure.py configure -DPHX_AUDIO=OFF -DCMAKE_OSX_ARCHITECTURES=arm64
+python3 configure.py configure -DPHX_AUDIO_BACKEND=NULL -DCMAKE_OSX_ARCHITECTURES=arm64
 python3 configure.py build --parallel 8
 python3 configure.py run LTheory
 ```
@@ -41,6 +41,38 @@ configuration suffix. Homebrew dependencies must remain installed at runtime.
 Audio is disabled by default on macOS: the silent backend preserves the public
 audio functions without FMOD or sound-file loading. Other platforms retain FMOD
 by default. Native macOS FMOD support is not implemented yet.
+
+### Optional OSS audio (miniaudio)
+
+```sh
+python3 configure.py configure -DPHX_AUDIO_BACKEND=MINIAUDIO
+python3 configure.py build --parallel 8
+python3 configure.py run FMODTest
+```
+
+The existing `FMODTest` now uses the current backend-neutral Sound/Audio API and
+the bundled assets (no new audio files). It starts the MP3 music loop at 20%
+volume. Controls:
+
+- **1 / 2:** MP3 one-shots; **3:** WAV one-shot.
+- **M:** switch between MP3 and Vorbis (`Imperial_March.ogx`) music loops.
+- **Space:** pause/resume; **R:** rewind; **P:** cycle pitch.
+- **- / =:** decrease/increase volume.
+- **WASD / right mouse drag:** move the blue listener relative to the emitters.
+- **Escape:** exit and shut down audio.
+
+No proprietary SDK or additional package installation is required. Miniaudio
+and the Vorbis decoder are pinned and vendored in the engine. Manual testing on
+Apple Silicon confirmed the audio test's playback, positional audio, controls,
+and clean shutdown across the bundled MP3, WAV, and Vorbis assets.
+NULL remains the default on macOS; select `-DPHX_AUDIO_BACKEND=NULL` to switch
+back. An explicit backend overrides the old `PHX_AUDIO` cache value. FMOD remains
+available on its original platforms through `-DPHX_AUDIO_BACKEND=FMOD`.
+
+`python3 configure.py run LTheory` still launches the game with the selected
+backend. The current gameplay has no active Sound playback calls, so use
+`FMODTest` to check audibility rather than expecting a new in-game soundtrack.
+Async loading stress, WAV export, and longer-running lifetimes remain to be tested.
 
 LuaFileSystem must target LuaJIT's Lua 5.1 ABI, not the standalone Lua version
 installed with LuaRocks. The command above installs it into Homebrew's prefix,
