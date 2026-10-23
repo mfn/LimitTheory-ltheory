@@ -40,6 +40,20 @@ def main():
     library = Path('bin/libphx64' + library_suffix)
     for path in (executable, library):
         verify_architecture(path, target)
+    # Force dependency/symbol resolution in an isolated process. Do not call
+    # Engine_Init, open a window, or initialize an audio device. A loader error,
+    # native crash, or timeout must fail packaging rather than upload bad output.
+    subprocess.run([sys.executable, '-c', '''
+import ctypes, os, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+directory = os.add_dll_directory(str(path.parent)) if os.name == 'nt' else None
+engine = ctypes.CDLL(str(path))
+engine.Engine_GetBits.argtypes = []
+engine.Engine_GetBits.restype = ctypes.c_int
+if engine.Engine_GetBits() != 64:
+    raise SystemExit('Engine ABI reports a non-64-bit build')
+print('PASS: engine loads, dependencies resolve, Engine_GetBits() == 64')
+''', str(library.resolve())], check=True, timeout=60)
     cache = Path('build/CMakeCache.txt').read_text()
     assert 'PHX_AUDIO_BACKEND:STRING=MINIAUDIO' in cache
     engine_sha = git('-C', 'libphx', 'rev-parse', 'HEAD')

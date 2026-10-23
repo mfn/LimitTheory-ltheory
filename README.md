@@ -121,6 +121,13 @@ or audio is launched. Windows/Linux compilation still needs confirmation from
 the first successful workflow run; a CI build is not a runtime-support guarantee.
 There are no 32-bit, Intel macOS, or Linux/Windows arm64 jobs.
 
+Jobs verify shell error propagation (including failures piped through `tee`),
+binary architecture, and the pinned engine commit. Before packaging, a separate
+process loads the engine shared library and calls `Engine_GetBits`, forcing
+dependency resolution without initializing graphics/audio or launching the game.
+Loader failures, native crashes, and timeouts fail the job. Successful jobs
+therefore establish compilation, linking and basic library loading, not gameplay.
+
 ### Enabling and running
 
 GitHub requires the workflow to exist on the repository's **default branch**

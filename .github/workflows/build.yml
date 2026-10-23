@@ -104,6 +104,23 @@ jobs:
           esac
           cmake -S . -B build "${args[@]}" 2>&1 | tee ci-logs/configure.log
 
+      - name: Verify shell failure propagation
+        run: |
+          python3 - "$BASH" <<'PY'
+          import subprocess, sys
+          for script, expected in [
+              ('exit 7', 7),
+              ('false | tee /dev/null', 1),
+              ('false; echo UNREACHABLE', 1),
+          ]:
+              result = subprocess.run([
+                  sys.argv[1], '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', script
+              ], capture_output=True, text=True, timeout=10)
+              if result.returncode != expected or 'UNREACHABLE' in result.stdout:
+                  raise SystemExit('Shell swallowed failure: ' + script)
+          print('PASS: direct failures, piped failures and early exits propagate')
+          PY
+
       - name: Compile engine and game
         run: cmake --build build --config RelWithDebInfo --parallel 4 2>&1 | tee ci-logs/build.log
 
@@ -111,7 +128,7 @@ jobs:
         env:
           PLATFORM: ${{ matrix.platform }}
         run: |
-          python3 .github/scripts/package-build.py "$PLATFORM"
+          python3 .github/scripts/package-build.py "$PLATFORM" 2>&1 | tee ci-logs/verification.log
           case "$PLATFORM" in
             linux-x64)
               file bin/lt64 bin/libphx64.so | tee ci-logs/binary-info.log
