@@ -104,6 +104,61 @@ repository, fetch them into the submodule using its local `sibling` remote, and
 advance the game's submodule pointer. These commits are local until published;
 the original upstream submodule URL does not contain the macOS port.
 
+## Manual GitHub builds
+
+`.github/workflows/build.yml` builds the game and its exact pinned engine commit
+with **MINIAUDIO / RelWithDebInfo** on these GitHub-hosted runners:
+
+| Target | Runner | Toolchain |
+| --- | --- | --- |
+| Windows x64 | `windows-2022` | Visual Studio 2022 / MSVC |
+| Linux x64 | `ubuntu-24.04` | GCC |
+| macOS arm64 | `macos-15` | Apple Clang |
+
+The only trigger is `workflow_dispatch`: pushes, pull requests and schedules do
+not start builds. Each dispatch builds all three targets independently; no game
+or audio is launched. Windows/Linux compilation still needs confirmation from
+the first successful workflow run; a CI build is not a runtime-support guarantee.
+There are no 32-bit, Intel macOS, or Linux/Windows arm64 jobs.
+
+### Enabling and running
+
+GitHub requires the workflow to exist on the repository's **default branch**
+before it can be dispatched. If it only exists on `macos`, first publish the
+workflow to the default branch (or deliberately change the default branch).
+Then open **Actions → Build binaries → Run workflow**, selecting `macos`, or use:
+
+```sh
+gh workflow run build.yml --ref macos
+gh run list --workflow build.yml
+```
+
+The game checkout uses the normal read-only GitHub token. The engine checkout
+derives its GitHub repository from `.gitmodules` and uses the game's committed
+gitlink SHA, not the latest engine branch. Both forks are currently public, so
+no additional secret is required. If the engine becomes private, add a read-only
+deploy key to that engine repository and save its private key as the game
+repository Actions secret `LIBPHX_DEPLOY_KEY`. Do not commit the key. Checkout
+verifies GitHub's SSH host key and does not persist credentials for build steps.
+
+### Artifacts and limitations
+
+Each job uploads a `ltheory-<platform>-miniaudio` artifact containing a `.tar.gz`
+archive of the launcher, engine shared library, available debug symbols, and
+build metadata. Windows also includes the dependency DLLs copied by CMake.
+Tar preserves executable permissions when downloading through Actions.
+Separate `diagnostics-<platform>` artifacts contain configuration/build logs and
+compiler configuration, including on build failure. Retention is 14 days.
+
+These are **compilation artifacts, not standalone game distributions**. They omit
+Lua scripts and LFS assets; use them with the matching source checkout and
+runtime dependencies. Linux/macOS system libraries are not bundled, macOS refers
+to Homebrew libraries, and Windows needs the Visual C++ runtime. Builds are not
+signed/notarized and do not define a tested minimum runtime OS version. No game
+assets are downloaded during CI. No releases are published by the workflow.
+
+For local workflow validation, use `actionlint .github/workflows/build.yml`.
+
 ## Original Windows instructions
 
 With the above prerequisites installed, open a **Git Bash terminal**.
