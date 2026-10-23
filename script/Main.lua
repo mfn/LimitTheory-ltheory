@@ -3,6 +3,7 @@ package.path = package.path .. ';./script/?.lua'
 package.path = package.path .. ';./script/?.ext.lua'
 package.path = package.path .. ';./script/?.ffi.lua'
 
+lfs = require('lfs')
 require('env.env')
 
 Env.Call(function ()

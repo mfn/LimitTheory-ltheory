@@ -25,6 +25,7 @@ int main (int argc, char* argv[]) {
 
   Lua_SetBool(lua, "__debug__", DEBUG > 0);
   Lua_SetBool(lua, "__embedded__", true);
+  Lua_SetStr(lua, "__phx_library__", "./bin/" PHX_LIBRARY_NAME);
   Lua_SetNumber(lua, "__checklevel__", CHECK_LEVEL);
   if (argc >= 2)
     Lua_SetStr(lua, "__app__", argv[1]);
